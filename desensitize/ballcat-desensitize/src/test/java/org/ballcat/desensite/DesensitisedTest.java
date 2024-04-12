@@ -16,6 +16,8 @@
 
 package org.ballcat.desensite;
 
+import java.util.UUID;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.ballcat.desensitize.DesensitizationHandlerHolder;
@@ -26,15 +28,42 @@ import org.ballcat.desensitize.handler.SimpleDesensitizationHandler;
 import org.ballcat.desensitize.handler.SixAsteriskDesensitizationHandler;
 import org.ballcat.desensitize.handler.SlideDesensitizationHandler;
 import org.ballcat.desensitize.json.JsonDesensitizeSerializerModifier;
-import org.junit.jupiter.api.Assertions;
+import org.ballcat.desensitize.util.DesensitizedUtil;
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * @author Hccake 2021/1/23
- *
  */
 @Slf4j
 class DesensitisedTest {
+
+	@Test
+	public void testUtils() {
+		assertEquals("430123******431", DesensitizedUtil.maskString("430123990101431", 6, 3));
+		assertEquals("430123********432X", DesensitizedUtil.maskString("43012319990101432X", 6, 4));
+		assertEquals("430123ABCD432X", DesensitizedUtil.maskString("43012319990101432X", 6, 4, "ABCD"));
+		assertEquals("张*丰", DesensitizedUtil.maskChineseName("张三丰"));
+		assertEquals("430123********432X", DesensitizedUtil.maskIdCard("43012319990101432X"));
+		assertEquals("8***8976", DesensitizedUtil.maskPhone("89898976"));
+		assertEquals("0108***8976", DesensitizedUtil.maskPhone("01089898976"));
+		assertEquals("010-****8976", DesensitizedUtil.maskPhone("010-89898976"));
+		assertEquals("138******78", DesensitizedUtil.maskMobile("13812345678"));
+		assertEquals("北京市西城区******", DesensitizedUtil.maskAddress("北京市西城区金城坊街2号"));
+		assertEquals("t****@qq.com", DesensitizedUtil.maskMail("test.demo@qq.com"));
+		assertEquals("622260**********1234", DesensitizedUtil.maskBankAccount("62226000000043211234"));
+		assertEquals("******", DesensitizedUtil.maskPassword(UUID.randomUUID().toString()));
+		assertEquals("000****34", DesensitizedUtil.maskKey("0000000123456q34"));
+		assertEquals("192.*.*.*", DesensitizedUtil.maskIP("192.168.2.1"));
+		assertEquals("2001:*:*:*:*:*:*:*", DesensitizedUtil.maskIP("2001:0db8:02de:0000:0000:0000:0000:0e13"));
+		assertEquals("2001:*:*:*:*:*:*:*", DesensitizedUtil.maskIP("2001:db8:2de:0:0:0:0:e13"));
+		assertEquals("4*01***99*********", DesensitizedUtil.maskString("43012319990101432X", "1", "4-6", "9-"));
+		assertEquals("4-01---99---------",
+				DesensitizedUtil.maskString("43012319990101432X", '-', false, "1", "4-6", "9-"));
+		assertEquals("-3--231--90101432X",
+				DesensitizedUtil.maskString("43012319990101432X", '-', true, "1", "4-6", "9-"));
+	}
 
 	@Test
 	void testSimple() {
@@ -43,7 +72,7 @@ class DesensitisedTest {
 			.getSimpleHandler(SixAsteriskDesensitizationHandler.class);
 		String origin = "你好吗？"; // 原始字符串
 		String target = desensitizationHandler.handle(origin); // 替换处理
-		Assertions.assertEquals("******", target);
+		assertEquals("******", target);
 	}
 
 	@Test
@@ -55,11 +84,11 @@ class DesensitisedTest {
 		String regex = "(^.)[^@]*(@.*$)"; // 正则表达式
 		String replacement = "$1****$2"; // 占位替换表达式
 		String target1 = desensitizationHandler.handle(origin, regex, replacement); // 替换处理
-		Assertions.assertEquals("1****@qq.com", target1);
+		assertEquals("1****@qq.com", target1);
 
 		// 内置的正则脱敏类型
 		String target2 = desensitizationHandler.handle(origin, RegexDesensitizationTypeEnum.EMAIL);
-		Assertions.assertEquals("1****@qq.com", target2);
+		assertEquals("1****@qq.com", target2);
 	}
 
 	@Test
@@ -69,10 +98,10 @@ class DesensitisedTest {
 			.getSlideDesensitizationHandler();
 		String origin = "15805516789"; // 原始字符串
 		String target1 = desensitizationHandler.handle(origin, 3, 2); // 替换处理
-		Assertions.assertEquals("158******89", target1);
+		assertEquals("158******89", target1);
 
 		String target2 = desensitizationHandler.handle(origin, SlideDesensitizationTypeEnum.PHONE_NUMBER); // 替换处理
-		Assertions.assertEquals("158******89", target2);
+		assertEquals("158******89", target2);
 	}
 
 	@Test
@@ -98,7 +127,7 @@ class DesensitisedTest {
 		log.info("脱敏后的数据：{}", value);
 
 		String expected = "{\"username\":\"xiaoming\",\"password\":\"adm****56\",\"email\":\"c****@foxmail.com\",\"phoneNumber\":\"158******00\",\"testField\":\"TEST-这是测试属性\",\"customDesensitize\":\"test\"}";
-		Assertions.assertEquals(expected, value);
+		assertEquals(expected, value);
 	}
 
 }
